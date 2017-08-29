@@ -10,9 +10,9 @@ process.send("Hello world!");
 console.log("I'm alive!");
 
 /*
-setTimeout(function die() {
+	setTimeout(function die() {
 	throw new Error("crash boom bang!");
-}, 3000);
+	}, 3000);
 */
 
 function message(msg) {
@@ -20,7 +20,7 @@ function message(msg) {
 	if(msg.getDevices) {
 		telldus.getDevices(function(err,devices) {
 			process.send({answer: devices, err: err, id: msg.id});
-			});
+		});
 	}
 	else if(msg.turnOn) {
 		telldus.turnOn(msg.turnOn, function(err) {
@@ -55,20 +55,20 @@ function getStatus(id) {
 		if(err) console.log("Failed to get devices id=" + id);
 		else {
 			for(var i=0; i<devices.length; i++) {
-			if(devices[i].id == id) {
-				process.send({
-					deviceEvent: {
-						deviceId: id,
-						status: devices[i].status
-					}
-				});
-				return;
+				if(devices[i].id == id) {
+					process.send({
+						deviceEvent: {
+							deviceId: id,
+							status: devices[i].status
+						}
+					});
+					return;
+				}
 			}
-		}
 		}
 		// If we did not return:
 		console.log("Unknown device id=" + id);
-		});
+	});
 }
 
 /*
@@ -112,7 +112,7 @@ function sensorEvent(deviceId,protocol,model,type,value,timestamp) {
 			timestamp: timestamp
 		}
 	});
-	}
+}
 
 
 function debugEvent(controllerId, data) {
@@ -147,10 +147,10 @@ function debugEvent(controllerId, data) {
 	if(obj.class == "sensor" && obj.id && useRawForSensors) {
 		
 		//RAW: class:sensor;protocol:fineoffset;id:199;model:temperaturehumidity;humidity:70;temp:5.7;
-			
-			//sensorEvent: deviceId=199, protocol=temperaturehumidity, model=fineoffset, type=1 value=5.7, timestamp=1478698883
-			//sensorEvent: deviceId=199, protocol=temperaturehumidity, model=fineoffset, type=2 value=70, timestamp=1478698883
-			
+		
+		//sensorEvent: deviceId=199, protocol=temperaturehumidity, model=fineoffset, type=1 value=5.7, timestamp=1478698883
+		//sensorEvent: deviceId=199, protocol=temperaturehumidity, model=fineoffset, type=2 value=70, timestamp=1478698883
+		
 		var temperature = 1;
 		var humidity = 2;
 		
@@ -183,17 +183,17 @@ function debugEvent(controllerId, data) {
 	}
 	
 	/*
-	else if(obj.class == "command" && obj.unit) {
+		else if(obj.class == "command" && obj.unit) {
 		// Timer to prevent doublets !?
 		process.send({
-			deviceEvent: {
-				deviceId: obj.unit, 
-				status: {name: obj.method == "turnon" ? "ON" : "OFF"}
-			}
+		deviceEvent: {
+		deviceId: obj.unit, 
+		status: {name: obj.method == "turnon" ? "ON" : "OFF"}
+		}
 		});
 		
-	}
-	
+		}
+		
 	*/
 }
 

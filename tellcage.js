@@ -1,7 +1,7 @@
 /*
 	Wraps/Encapsulates and fully abstracts the telldus module ... It can be used as a replacement for the telldus module
 	
-	 The telldus module can only have one something-listener or it will crash with segfault, it can also randomly hang
+	The telldus module can only have one something-listener or it will crash with segfault, it can also randomly hang
 	
 	This module spawns a worker, that is pinged and can be restarted without affecting your main daemon
 	
@@ -42,42 +42,42 @@ var firstSpawn = true;
 var updateStateOnRespawn = false;
 
 respawn();
+
+setInterval(ping, pingInterval);
+
+function ping() {
 	
-	setInterval(ping, pingInterval);
-	
-	function ping() {
+	if(pings.length > maxPingLost) {
+		close(worker);
 		
-		if(pings.length > maxPingLost) {
-			close(worker);
-			
-			// Note: if we get an exit event, it will also be respawned
-			respawnTimer = setTimeout(respawn, respawnTime);
-			
-			pings.length = 0;
-			
-		}
-		else {
-			
-			var id = ++PING_ID;
-			pings.push(id);
-			send({ping: id});
-		}
+		// Note: if we get an exit event, it will also be respawned
+		respawnTimer = setTimeout(respawn, respawnTime);
+		
+		pings.length = 0;
+		
 	}
-	
-	module.exports.turnOn = function turnOn(deviceId, callback) {
+	else {
+		
+		var id = ++PING_ID;
+		pings.push(id);
+		send({ping: id});
+	}
+}
+
+module.exports.turnOn = function turnOn(deviceId, callback) {
 	//log("Turning ON " + deviceId + "...");
 	var id = ++CB_ID;
 	question[id] = callback;
 	send({turnOn: deviceId, id: id});
-	}
-	
-	module.exports.turnOff = function turnOff(deviceId, callback) {
+}
+
+module.exports.turnOff = function turnOff(deviceId, callback) {
 	//log("Turning OFF " + deviceId + "...");
 	var id = ++CB_ID;
 	question[id] = callback;
 	send({turnOff: deviceId, id: id});
-	}
-	
+}
+
 module.exports.removeEventListener = removeEventListener;
 
 function removeEventListener(fun) {
@@ -130,7 +130,7 @@ function send(msg) {
 	if(worker) {
 		if(worker.connected) worker.send(msg);
 		else log("Worker not connected! Unable to send: " + JSON.stringify(msg));
-		}
+	}
 	else {
 		log("Worker not available! Unable to send: " + JSON.stringify(msg));
 	}
@@ -144,12 +144,12 @@ function message(msg) {
 	
 	if(msg.answer) {
 		if(question.hasOwnProperty(msg.id)) {
-				question[msg.id](msg.err, msg.answer);
-				delete question[msg.id];
-			}
+			question[msg.id](msg.err, msg.answer);
+			delete question[msg.id];
 		}
-		else if(msg.sensorEvent) {
-			sensorEventListeners.forEach(function(cb) {
+	}
+	else if(msg.sensorEvent) {
+		sensorEventListeners.forEach(function(cb) {
 			cb(msg.sensorEvent.deviceId, msg.sensorEvent.protocol, msg.sensorEvent.model, msg.sensorEvent.type, msg.sensorEvent.value, msg.sensorEvent.timestamp);
 		});
 	}
@@ -204,20 +204,20 @@ function respawn() {
 	worker.on('message', message);
 	
 	if(!firstSpawn && updateStateOnRespawn) {
-	// We could have missed a bunch of events during the downtime, 
-	// call getDevices and update device listeners so that they get the current state
-	getDevices(function state(err, devices) {
-		if(err) {
-			log("Failed to get devices after respawning telldus.");
-			throw err;
-		}
-		
-		deviceEventListeners.forEach(function updateDeviceEventListeners(cb) {
-			for(var i=0; i<devices.length; i++) cb(devices[i].id, devices[i].status);
+		// We could have missed a bunch of events during the downtime, 
+		// call getDevices and update device listeners so that they get the current state
+		getDevices(function state(err, devices) {
+			if(err) {
+				log("Failed to get devices after respawning telldus.");
+				throw err;
+			}
+			
+			deviceEventListeners.forEach(function updateDeviceEventListeners(cb) {
+				for(var i=0; i<devices.length; i++) cb(devices[i].id, devices[i].status);
+			});
+			
 		});
-		
-	});
-}
+	}
 	firstSpawn = false;
 	
 }
@@ -261,48 +261,47 @@ function exit(code, signal) {
 		
 		resetRestartsTimer = setTimeout(function() {
 			// Reset the restarts counter if the worker has been running for more then 60 seconds ...
-				restarts = 0;
-			}, oneMinute);
-			
-		}, waitForRespawn);
+			restarts = 0;
+		}, oneMinute);
 		
-	}
+	}, waitForRespawn);
 	
-	function close(worker) {
-		// Allow the process to gracefully shut down
-		
-		worker.kill('SIGTERM');
-		worker.kill('SIGINT');
-		worker.kill('SIGQUIT');
-		worker.kill('SIGHUP');
-		
-		if(worker.connected) worker.disconnect();
-	}
+}
+
+function close(worker) {
+	// Allow the process to gracefully shut down
 	
-	function log(msg) {
-		if(debug) console.log(myDate() + ": TELLCAGE-DEBUG: " + msg);
+	worker.kill('SIGTERM');
+	worker.kill('SIGINT');
+	worker.kill('SIGQUIT');
+	worker.kill('SIGHUP');
+	
+	if(worker.connected) worker.disconnect();
+}
+
+function log(msg) {
+	if(debug) console.log(myDate() + ": TELLCAGE-DEBUG: " + msg);
+	
+	function myDate() {
+		var d = new Date();
 		
-		function myDate() {
-			var d = new Date();
-			
-			var hour = addZero(d.getHours());
-			var minute = addZero(d.getMinutes());
-			var second = addZero(d.getSeconds());
-			
-			var day = addZero(d.getDate());
-			var month = addZero(1+d.getMonth());
-			var year = d.getFullYear();
-			
-			return year + "-" + month + "-" + day + " (" + hour + ":" + minute + ":" + second + "_" + d.getMilliseconds() + ")";
-			
-			function addZero(n) {
-				if(n < 10) return "0" + n;
-				else return n;
-			}
+		var hour = addZero(d.getHours());
+		var minute = addZero(d.getMinutes());
+		var second = addZero(d.getSeconds());
+		
+		var day = addZero(d.getDate());
+		var month = addZero(1+d.getMonth());
+		var year = d.getFullYear();
+		
+		return year + "-" + month + "-" + day + " (" + hour + ":" + minute + ":" + second + "_" + d.getMilliseconds() + ")";
+		
+		function addZero(n) {
+			if(n < 10) return "0" + n;
+			else return n;
 		}
-		
 	}
 	
-	
-	
-	
+}
+
+
+
